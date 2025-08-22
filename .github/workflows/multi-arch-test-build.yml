@@ -4,7 +4,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  build-mipsel_24kc:
+    name: Build for mipsel_24kc
     runs-on: ubuntu-latest
     steps:
       # 1. Checkout repo
@@ -29,8 +30,8 @@ jobs:
       # 4. Detect all packages (package/ + feeds/)
       - name: Detect packages
         run: |
-          PACKAGES=$(find package/ feeds/ -maxdepth 2 -name Makefile | \
-                     sed -e 's@\(.*\)/Makefile@\1@' | tr '\n' ' ')
+          PACKAGES=$(find package/ feeds/ -maxdepth 2 -name Makefile \
+                     | sed -e 's@\(.*\)/Makefile@\1@' | tr '\n' ' ')
           echo "PACKAGES=$PACKAGES" >> $GITHUB_ENV
           echo "Detected packages: $PACKAGES"
 
@@ -48,6 +49,7 @@ jobs:
 
       # 7. Generate PKG-INFO metadata
       - name: Generate PKG-INFO
+        shell: bash
         run: |
           MERGE_ID=$(git rev-parse --short HEAD)
           ARCHIVE_NAME=mipsel_24kc-$MERGE_ID
