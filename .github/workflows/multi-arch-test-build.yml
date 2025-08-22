@@ -53,7 +53,6 @@ jobs:
           ARCHIVE_NAME=mipsel_24kc-$MERGE_ID
           echo "ARCHIVE_NAME=$ARCHIVE_NAME" >> $GITHUB_ENV
 
-          # создаём PKG-INFO
           cat << _EOF_ > PKG-INFO
           Metadata-Version: 2.1
           Name: $ARCHIVE_NAME
@@ -65,7 +64,6 @@ jobs:
           Modified packages:
           _EOF_
 
-          # добавляем все пакеты в PKG-INFO
           for p in $PACKAGES; do
             echo "  $p" >> PKG-INFO
           done
