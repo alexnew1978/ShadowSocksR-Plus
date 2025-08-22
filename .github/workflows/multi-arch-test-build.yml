@@ -63,9 +63,11 @@ Platform: mipsel_24kc
 
 Modified packages:
 _EOF_
+
           for p in $PACKAGES; do
             echo "  $p" >> PKG-INFO
           done
+
           echo >> PKG-INFO
           echo "Full file listing:" >> PKG-INFO
           ls -al *.ipk >> PKG-INFO || true
@@ -79,4 +81,3 @@ _EOF_
           path: |
             *.ipk
             PKG-INFO
-
