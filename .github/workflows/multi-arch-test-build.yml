@@ -1,76 +1,98 @@
-name: Build all packages for mipsel_24kc
+name: Start build ssr+  aarch64_generic by wk
 
 on:
-  workflow_dispatch:
-
+ workflow_dispatch:
+ 
 jobs:
   build:
+    name: Test ${{ matrix.arch }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: aarch64_generic
+            
     steps:
-      # 1. Checkout repo
       - uses: actions/checkout@v3
         with:
           fetch-depth: 0
 
-      # 2. Set branch
-      - name: Set branch
+      - name: Determine branch name
         run: |
-          BRANCH="${GITHUB_BASE_REF:-master}"
+          BRANCH="master"
+          echo "Building for $BRANCH"
           echo "BRANCH=$BRANCH" >> $GITHUB_ENV
 
-      
-      # 4. Detect all packages
-      - name: Detect packages
+      - name: Determine changed packages
         run: |
-          PACKAGES=$(find package/ feeds/ -maxdepth 2 -name Makefile | \
-                     sed -e 's@\(.*\)/Makefile@\1@' | tr '\n' ' ')
+          # only detect packages with changes
+          PKG_ROOTS=$(find . -name Makefile | \
+            grep -v ".*/src/Makefile" | \
+            sed -e 's@./\(.*\)/Makefile@\1/@')
+          CHANGES=$(git diff --diff-filter=d --name-only origin/$BRANCH)
+
+          for ROOT in $PKG_ROOTS; do
+            for CHANGE in $CHANGES; do
+              if [[ "$CHANGE" == "$ROOT"* ]]; then
+                PACKAGES+=$(echo "$ROOT" | sed -e 's@\(.*\)/@\1 @')
+                break
+              fi
+            done
+          done
+          # fallback to test packages if nothing explicitly changes this is
+          # should run if other mechanics in packages.git changed
+          PACKAGES="${PACKAGES:-luci-app-ssr-plus}"
+
+          echo "Building $PACKAGES"
           echo "PACKAGES=$PACKAGES" >> $GITHUB_ENV
-          echo "Detected packages: $PACKAGES"
 
-      # 5. Build all packages
-      - name: Build packages
-        uses: immortalwrt/gh-action-sdk@v5
+      - name: Build
+        uses: immortalwrt/gh-action-sdk@v4.1
         env:
-          ARCH: mipsel_24kc
+          ARCH: ${{ matrix.arch }}-${{ env.BRANCH }}
           FEEDNAME: packages_ci
-          V: s
 
-      # 6. Collect all built .ipk files
-      - name: Collect packages
-        run: cp bin/packages/mipsel_24kc/packages_ci/*.ipk . || true
+      - name: Move created packages to project dir
+        run: cp bin/packages/${{ matrix.arch }}/packages_ci/*.ipk . || true
 
-      # 7. Generate PKG-INFO metadata
-      - name: Generate PKG-INFO
+      - name: Collect metadata
         run: |
           MERGE_ID=$(git rev-parse --short HEAD)
-          ARCHIVE_NAME=mipsel_24kc-$MERGE_ID
-          echo "ARCHIVE_NAME=$ARCHIVE_NAME" >> $GITHUB_ENV
+          echo "MERGE_ID=$MERGE_ID" >> $GITHUB_ENV
+          echo "BASE_ID=$(git rev-parse --short HEAD^1)" >> $GITHUB_ENV
+          echo "HEAD_ID=$(git rev-parse --short HEAD^2)" >> $GITHUB_ENV
+          PRNUMBER=${GITHUB_REF_NAME%/merge}
+          echo "PRNUMBER=$PRNUMBER" >> $GITHUB_ENV
+          echo "ARCHIVE_NAME=${{matrix.arch}}-PR$PRNUMBER-$MERGE_ID" >> $GITHUB_ENV
 
+      - name: Generate metadata
+        run: |
           cat << _EOF_ > PKG-INFO
           Metadata-Version: 2.1
-          Name: $ARCHIVE_NAME
+          Name: ${{env.ARCHIVE_NAME}}
           Version: $BRANCH
           Author: $GITHUB_ACTOR
-          Summary: All packages for mipsel_24kc
-          Platform: mipsel_24kc
-
+          Home-page: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/pull/$PRNUMBER
+          Download-URL: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID
+          Summary: $PACKAGES
+          Platform: ${{ matrix.arch }}
+          Packages for ImmortalWrt $BRANCH running on ${{matrix.arch}}, built from PR $PRNUMBER
+          at commit $HEAD_ID, against $BRANCH at commit $BASE_ID, with merge SHA $MERGE_ID.
           Modified packages:
           _EOF_
-
-          for p in $PACKAGES; do
-            echo "  $p" >> PKG-INFO
+          for p in $PACKAGES
+          do
+            echo "  "$p >> PKG-INFO
           done
-
           echo >> PKG-INFO
-          echo "Full file listing:" >> PKG-INFO
+          echo Full file listing: >> PKG-INFO
           ls -al *.ipk >> PKG-INFO || true
           cat PKG-INFO
 
-      # 8. Upload all .ipk and PKG-INFO as artifacts
-      - name: Upload packages
-        uses: actions/upload-artifact@v4
+      - name: Store packages
+        uses: actions/upload-artifact@v3
         with:
-          name: ${{ env.ARCHIVE_NAME }}-packages
+          name: ${{env.ARCHIVE_NAME}}-packages
           path: |
             *.ipk
-            PKG-INFO
