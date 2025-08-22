@@ -55,15 +55,15 @@ jobs:
 
           # создаём PKG-INFO
           cat << _EOF_ > PKG-INFO
-Metadata-Version: 2.1
-Name: $ARCHIVE_NAME
-Version: $BRANCH
-Author: $GITHUB_ACTOR
-Summary: All packages for mipsel_24kc
-Platform: mipsel_24kc
+          Metadata-Version: 2.1
+          Name: $ARCHIVE_NAME
+          Version: $BRANCH
+          Author: $GITHUB_ACTOR
+          Summary: All packages for mipsel_24kc
+          Platform: mipsel_24kc
 
-Modified packages:
- _EOF_
+          Modified packages:
+          _EOF_
 
           # добавляем все пакеты в PKG-INFO
           for p in $PACKAGES; do
