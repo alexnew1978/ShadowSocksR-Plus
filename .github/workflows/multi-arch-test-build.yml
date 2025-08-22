@@ -63,7 +63,7 @@ Summary: All packages for mipsel_24kc
 Platform: mipsel_24kc
 
 Modified packages:
-_EOF_
+ _EOF_
 
           # добавляем все пакеты в PKG-INFO
           for p in $PACKAGES; do
