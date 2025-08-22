@@ -18,14 +18,7 @@ jobs:
           BRANCH="${GITHUB_BASE_REF:-master}"
           echo "BRANCH=$BRANCH" >> $GITHUB_ENV
 
-      # 3. Add helloworld feed
-      - name: Add helloworld feed
-        run: |
-          sed -i "/helloworld/d" feeds.conf.default
-          echo "src-git helloworld https://github.com/fw876/helloworld.git" >> feeds.conf.default
-          ./scripts/feeds update -a
-          ./scripts/feeds install -a -f
-
+      
       # 4. Detect all packages
       - name: Detect packages
         run: |
